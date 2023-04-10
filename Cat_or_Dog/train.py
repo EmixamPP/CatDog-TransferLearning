@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.applications import MobileNetV2
 from keras_preprocessing.image import ImageDataGenerator
 from selenium.webdriver.remote.mobile import Mobile
 from sklearn.model_selection import train_test_split
@@ -31,9 +32,9 @@ class DogCatClassifier:
 
     IMG_HEIGHT = 256
     IMG_WIDTH = 256
-    BATCH_SIZE = 64
+    BATCH_SIZE = 10
 
-    def __init__(self, data_dir="data", epochs=1):
+    def __init__(self, data_dir, epochs=1):
         """
         :param data_dir: directory of the data
         :param epochs: number of epochs for the training
@@ -42,7 +43,7 @@ class DogCatClassifier:
         self.data_dir = data_dir
 
         # Load data and labels
-        self.X = sorted(os.listdir(self.data_dir))  # Files names of the images
+        self.X = sorted(os.listdir(self.data_dir)[:100])  # Files names of the images
         self.y = np.empty(len(self.X), dtype=str)  # Labels
         self.y[np.char.startswith(self.X, "cat")] = "c"
         self.y[np.char.startswith(self.X, "dog")] = "d"
@@ -112,8 +113,8 @@ class DogCatClassifier:
                 128,  # Number of filters
                 (3, 3),  # Padding size
                 input_shape=(
-                    cls.IMG_HEIGHT,
-                    cls.IMG_WIDTH,
+                    self.IMG_HEIGHT,
+                    self.IMG_WIDTH,
                     3,
                 ),  # Shape of the input images
                 activation="relu",  # Output function of the neurons
@@ -151,6 +152,8 @@ class DogCatClassifier:
             ),  # Optimizer function to update weights during the training
             metrics=["accuracy", "AUC"],
         )  # Metrics to monitor during training and testing
+
+        model.class_mode = "binary"
 
         # Print model summary
         model.summary()
@@ -255,8 +258,8 @@ class DogCatClassifierTransfer(DogCatClassifier):
 
         return model
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CNN Trainer for the Cat or Dog app.")
 
     parser.add_argument(
@@ -284,13 +287,6 @@ if __name__ == "__main__":
         choices=["MobileNetV2"]
     )
     args = parser.parse_args()
-
-    if Path(f"model_{args.folder}").is_dir():
-        print(f"Folder model_{args.folder} already exists do you want to overwrite ?")
-        y = input('Type "Yes" or "No": ')
-        if y != "Yes":
-            print("Aborting.")
-            sys.exit()
 
     if args.pretrainedmodel == "":
         clf = DogCatClassifier(args.data)

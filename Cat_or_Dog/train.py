@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from keras_preprocessing.image import ImageDataGenerator
+from selenium.webdriver.remote.mobile import Mobile
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.applications.resnet import preprocess_input
 from tensorflow.keras.layers import (
@@ -46,7 +47,7 @@ class DogCatClassifier:
         self.y[np.char.startswith(self.X, "cat")] = "c"
         self.y[np.char.startswith(self.X, "dog")] = "d"
 
-        self.model = DogCatClassifier._load_model()
+        self.model = self._load_model()
 
     def fit(self, folder):
         """Fit the model using the data in the selected directory"""
@@ -101,8 +102,7 @@ class DogCatClassifier:
 
         plt.savefig(os.path.join(SAVE_DIR, "results.png"))
 
-    @classmethod
-    def _load_model(cls):
+    def _load_model(self):
         """Build a CNN model for image classification"""
         model = Sequential()
 
@@ -201,7 +201,7 @@ class DogCatClassifier:
             # batch size
             batch_size=self.BATCH_SIZE,
             # Classification mode
-            class_mode="binary",
+            class_mode=self.model.class_mode,
             # Target size of the images
             target_size=(self.IMG_HEIGHT, self.IMG_WIDTH),
         )
@@ -213,7 +213,7 @@ class DogCatClassifier:
             subset="validation",
             shuffle=True,
             batch_size=self.BATCH_SIZE,
-            class_mode="binary",
+            class_mode=self.model.class_mode,
             target_size=(self.IMG_HEIGHT, self.IMG_WIDTH),
         )
         test_data_generator = test_datagen.flow_from_dataframe(
@@ -223,12 +223,37 @@ class DogCatClassifier:
             y_col="class",
             shuffle=False,
             batch_size=self.BATCH_SIZE,
-            class_mode="binary",
+            class_mode=self.model.class_mode,
             target_size=(self.IMG_HEIGHT, self.IMG_WIDTH),
         )
 
         return train_data_generator, valid_data_generator, test_data_generator
 
+
+class DogCatClassifierTransfer(DogCatClassifier):
+    def __init__(self, data, architecture):
+        self.buildArchitecture = architecture
+        super().__init__(data)
+
+    def _load_model(self):
+        """Build a CNN model for image classification"""
+        model = self.buildArchitecture(weights=None,
+                                       input_shape=(DogCatClassifier.IMG_WIDTH, DogCatClassifier.IMG_HEIGHT, 3),
+                                       classes=2)
+        model.class_mode = "categorical"
+
+        model.compile(
+            loss="categorical_crossentropy",  # Loss function for binary classification
+            optimizer=RMSprop(
+                lr=1e-3
+            ),  # Optimizer function to update weights during the training
+            metrics=["accuracy", "AUC"],
+        )  # Metrics to monitor during training and testing
+
+        # Print model summary
+        model.summary()
+
+        return model
 
 if __name__ == "__main__":
 
@@ -241,6 +266,23 @@ if __name__ == "__main__":
         help="Destination folder to save the model after training ends.",
         default="Custom",
     )
+
+    parser.add_argument(
+        "-d",
+        "--data",
+        type=str,
+        help="Images folder",
+        required=True,
+    )
+
+    parser.add_argument(
+        "-m",
+        "--pretrainedmodel",
+        type=str,
+        help="Images folder",
+        default="",
+        choices=["MobileNetV2"]
+    )
     args = parser.parse_args()
 
     if Path(f"model_{args.folder}").is_dir():
@@ -250,5 +292,8 @@ if __name__ == "__main__":
             print("Aborting.")
             sys.exit()
 
-    clf = DogCatClassifier()
-    clf.fit(Path(f"model_{args.folder}"))
+    if args.pretrainedmodel == "":
+        clf = DogCatClassifier(args.data)
+    elif args.pretrainedmodel == "MobileNetV2":
+        clf = DogCatClassifierTransfer(args.data, MobileNetV2)
+    clf.fit(args.folder)

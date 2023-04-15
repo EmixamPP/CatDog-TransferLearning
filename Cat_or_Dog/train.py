@@ -168,7 +168,6 @@ class DogCatClassifier:
 
         # Print model summary
         model.summary()
-
         return model
 
     def _gen_data(self):

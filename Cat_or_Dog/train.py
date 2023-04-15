@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.applications import MobileNetV2
 from keras_preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
@@ -15,12 +17,10 @@ from tensorflow.keras.layers import (
     Flatten,
     Dropout,
 )
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import RMSprop
+
 import argparse
 
 SAVE_DIR = "backup"  # Save directory for backup weights during the training
-
 
 class DogCatClassifier:
     """
@@ -151,7 +151,7 @@ class DogCatClassifier:
             model.compile(
                 loss="binary_crossentropy",  # Loss function for binary classification
                 optimizer=RMSprop(
-                    lr=1e-3
+                    learning_rate=1e-3
                 ),  # Optimizer function to update weights during the training
                 metrics=["accuracy", "AUC"],
             )  # Metrics to monitor during training and testing
@@ -257,7 +257,7 @@ class DogCatClassifierTransfer(DogCatClassifier):
         model.compile(
             loss="categorical_crossentropy",  # Loss function for binary classification
             optimizer=RMSprop(
-                lr=1e-3
+                learning_rate=1e-3
             ),  # Optimizer function to update weights during the training
             metrics=["accuracy", "AUC"],
         )  # Metrics to monitor during training and testing
@@ -322,6 +322,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
 
     if args.pretrainedmodel == "":
         clf = DogCatClassifier(args.data, categories=args.categories, model=args.modelpath, tl=args.transferlearning)

@@ -17,7 +17,6 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import RMSprop
-from pathlib import Path
 import argparse
 
 SAVE_DIR = "backup"  # Save directory for backup weights during the training

@@ -1,14 +1,16 @@
+import argparse
 import os
 import random
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import RMSprop
-from tensorflow.keras.applications import MobileNetV2
 from keras_preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.applications.resnet import preprocess_input
 from tensorflow.keras.layers import (
     Dense,
@@ -17,10 +19,6 @@ from tensorflow.keras.layers import (
     Flatten,
     Dropout,
 )
-for device in tf.config.experimental.list_physical_devices('GPU'):
-    tf.config.experimental.set_memory_growth(device, True)
-
-import argparse
 
 SAVE_DIR = "backup"  # Save directory for backup weights during the training
 
@@ -32,7 +30,7 @@ class DogCatClassifier:
 
     IMG_HEIGHT = 256
     IMG_WIDTH = 256
-    BATCH_SIZE = 10
+    BATCH_SIZE = 32
 
     def __init__(self, data_dir, categories=["cat", "dog"], epochs=1, model=None, tl=False, numLayersNotFreezed=1):
         """
@@ -45,13 +43,11 @@ class DogCatClassifier:
         # Load data and labels
         self.X = os.listdir(self.data_dir)  # Files names of the images
         random.shuffle(self.X)
-        self.X = self.X[:100]
-
+        self.X = self.X
         self.y = np.empty(len(self.X), dtype=str)  # Labels
 
         for category in categories:
             self.y[np.char.startswith(self.X, category)] = category[0]
-
 
         self.model = self._load_model(model, tl, numLayersNotFreezed)
 
@@ -160,11 +156,10 @@ class DogCatClassifier:
         else:
             model = tf.keras.models.load_model(path)
 
-
         model.class_mode = "binary"
 
         if transferlearning:
-            for layer in model.layers[1:len(model.layers)-numLayersNotFreezed]:
+            for layer in model.layers[1:len(model.layers) - numLayersNotFreezed]:
                 layer.trainable = False
 
         # Print model summary
@@ -245,7 +240,7 @@ class DogCatClassifier:
 
 
 class DogCatClassifierTransfer(DogCatClassifier):
-    def __init__(self, data, architecture, categories = ["cat", "dog"]):
+    def __init__(self, data, architecture, categories=["cat", "dog"]):
         self.buildArchitecture = architecture
         super().__init__(data, categories=categories)
 
@@ -325,9 +320,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
     if args.pretrainedmodel == "":
-        clf = DogCatClassifier(args.data, categories=args.categories, model=args.modelpath, tl=args.transferlearning)
+        clf = DogCatClassifier(args.data, categories=args.categories, model=args.modelpath, tl=args.transferlearning, epochs=5)
     elif args.pretrainedmodel == "MobileNetV2":
         clf = DogCatClassifierTransfer(args.data, MobileNetV2, categories=args.categories)
     clf.fit(args.folder)

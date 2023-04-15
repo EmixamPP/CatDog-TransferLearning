@@ -1,12 +1,11 @@
 import os
-import sys
+import random
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.applications import MobileNetV2
 from keras_preprocessing.image import ImageDataGenerator
-from selenium.webdriver.remote.mobile import Mobile
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.applications.resnet import preprocess_input
 from tensorflow.keras.layers import (
@@ -34,7 +33,7 @@ class DogCatClassifier:
     IMG_WIDTH = 256
     BATCH_SIZE = 10
 
-    def __init__(self, data_dir, epochs=1):
+    def __init__(self, data_dir, categories=["cat", "dog"], epochs=1, model=None, tl=False, numLayersNotFreezed=1):
         """
         :param data_dir: directory of the data
         :param epochs: number of epochs for the training
@@ -43,12 +42,17 @@ class DogCatClassifier:
         self.data_dir = data_dir
 
         # Load data and labels
-        self.X = sorted(os.listdir(self.data_dir)[:100])  # Files names of the images
-        self.y = np.empty(len(self.X), dtype=str)  # Labels
-        self.y[np.char.startswith(self.X, "cat")] = "c"
-        self.y[np.char.startswith(self.X, "dog")] = "d"
+        self.X = os.listdir(self.data_dir)  # Files names of the images
+        random.shuffle(self.X)
+        self.X = self.X[:100]
 
-        self.model = self._load_model()
+        self.y = np.empty(len(self.X), dtype=str)  # Labels
+
+        for category in categories:
+            self.y[np.char.startswith(self.X, category)] = category[0]
+
+
+        self.model = self._load_model(model, tl, numLayersNotFreezed)
 
     def fit(self, folder):
         """Fit the model using the data in the selected directory"""
@@ -103,57 +107,64 @@ class DogCatClassifier:
 
         plt.savefig(os.path.join(SAVE_DIR, "results.png"))
 
-    def _load_model(self):
+    def _load_model(self, path, transferlearning, numLayersNotFreezed):
         """Build a CNN model for image classification"""
-        model = Sequential()
+        if path is None:
+            model = Sequential()
 
-        # 2D Convolutional layer
-        model.add(
-            Conv2D(
-                128,  # Number of filters
-                (3, 3),  # Padding size
-                input_shape=(
-                    self.IMG_HEIGHT,
-                    self.IMG_WIDTH,
-                    3,
-                ),  # Shape of the input images
-                activation="relu",  # Output function of the neurons
-                padding="same",
-            )
-        )  # Behaviour of the padding region near the borders
-        # 2D Pooling layer to reduce image shape
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+            # 2D Convolutional layer
+            model.add(
+                Conv2D(
+                    128,  # Number of filters
+                    (3, 3),  # Padding size
+                    input_shape=(
+                        self.IMG_HEIGHT,
+                        self.IMG_WIDTH,
+                        3,
+                    ),  # Shape of the input images
+                    activation="relu",  # Output function of the neurons
+                    padding="same",
+                )
+            )  # Behaviour of the padding region near the borders
+            # 2D Pooling layer to reduce image shape
+            model.add(MaxPooling2D(pool_size=(2, 2)))
 
-        model.add(Conv2D(128, (3, 3), activation="relu", padding="same"))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+            model.add(Conv2D(128, (3, 3), activation="relu", padding="same"))
+            model.add(MaxPooling2D(pool_size=(2, 2)))
 
-        model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+            model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
+            model.add(MaxPooling2D(pool_size=(2, 2)))
 
-        model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+            model.add(Conv2D(64, (3, 3), activation="relu", padding="same"))
+            model.add(MaxPooling2D(pool_size=(2, 2)))
 
-        model.add(Conv2D(32, (3, 3), activation="relu", padding="same"))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+            model.add(Conv2D(32, (3, 3), activation="relu", padding="same"))
+            model.add(MaxPooling2D(pool_size=(2, 2)))
 
-        # Transform 2D input shape into 1D shape
-        model.add(Flatten())
-        # Dense layer of fully connected neurons
-        model.add(Dense(128, activation="relu"))
-        # Dropout layer to reduce overfitting, the argument is the proportion of random neurons ignored in the training
-        model.add(Dropout(0.2))
-        # Output layer
-        model.add(Dense(1, activation="sigmoid"))
+            # Transform 2D input shape into 1D shape
+            model.add(Flatten())
+            # Dense layer of fully connected neurons
+            model.add(Dense(128, activation="relu"))
+            # Dropout layer to reduce overfitting, the argument is the proportion of random neurons ignored in the training
+            model.add(Dropout(0.2))
+            # Output layer
+            model.add(Dense(1, activation="sigmoid"))
+            model.compile(
+                loss="binary_crossentropy",  # Loss function for binary classification
+                optimizer=RMSprop(
+                    lr=1e-3
+                ),  # Optimizer function to update weights during the training
+                metrics=["accuracy", "AUC"],
+            )  # Metrics to monitor during training and testing
+        else:
+            model = tf.keras.models.load_model(path)
 
-        model.compile(
-            loss="binary_crossentropy",  # Loss function for binary classification
-            optimizer=RMSprop(
-                lr=1e-3
-            ),  # Optimizer function to update weights during the training
-            metrics=["accuracy", "AUC"],
-        )  # Metrics to monitor during training and testing
 
         model.class_mode = "binary"
+
+        if transferlearning:
+            for layer in model.layers[1:len(model.layers)-numLayersNotFreezed]:
+                layer.trainable = False
 
         # Print model summary
         model.summary()
@@ -234,9 +245,9 @@ class DogCatClassifier:
 
 
 class DogCatClassifierTransfer(DogCatClassifier):
-    def __init__(self, data, architecture):
+    def __init__(self, data, architecture, categories = ["cat", "dog"]):
         self.buildArchitecture = architecture
-        super().__init__(data)
+        super().__init__(data, categories=categories)
 
     def _load_model(self):
         """Build a CNN model for image classification"""
@@ -282,14 +293,40 @@ if __name__ == "__main__":
         "-m",
         "--pretrainedmodel",
         type=str,
-        help="Images folder",
+        help="Name of a pretrained network",
         default="",
         choices=["MobileNetV2"]
     )
+
+    parser.add_argument(
+        "-mp",
+        "--modelpath",
+        type=str,
+        help="Path to an existing model",
+        default=None
+    )
+
+    parser.add_argument(
+        "-c",
+        "--categories",
+        type=str,
+        nargs="+",
+        help="Name of the categories",
+        default=["cat", "dog"],
+    )
+
+    parser.add_argument(
+        "-tl",
+        "--transferlearning",
+        type=bool,
+        help="Is TL applied",
+        default=False,
+    )
+
     args = parser.parse_args()
 
     if args.pretrainedmodel == "":
-        clf = DogCatClassifier(args.data)
+        clf = DogCatClassifier(args.data, categories=args.categories, model=args.modelpath, tl=args.transferlearning)
     elif args.pretrainedmodel == "MobileNetV2":
-        clf = DogCatClassifierTransfer(args.data, MobileNetV2)
+        clf = DogCatClassifierTransfer(args.data, MobileNetV2, categories=args.categories)
     clf.fit(args.folder)

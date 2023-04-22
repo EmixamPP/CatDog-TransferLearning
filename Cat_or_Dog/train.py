@@ -364,5 +364,5 @@ if __name__ == "__main__":
             plot_path = f"{save_dir}/{model_name}.png"
             os.makedirs(save_dir, exist_ok=True)
 
-            clf = DogCatClassifierKerasArch(args.data, MobileNetV2, data_size=data_size)
+            clf = DogCatClassifierKerasArch(args.tldata, MobileNetV2, data_size=data_size)
             clf.fit(save_dir, epochs=5, plot_res_path=plot_path)

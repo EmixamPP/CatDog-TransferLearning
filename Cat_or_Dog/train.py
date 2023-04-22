@@ -335,7 +335,7 @@ if __name__ == "__main__":
     #elif args.pretrainedmodel == "MobileNetV2":
     #    clf = DogCatClassifierKerasArch(args.data, MobileNetV2, data_size=data_size, categories=args.categories)
 
-    print("########### Exp 1: train model on motos and bikes ###########")
+    print("########### Exp 1: train model on car and bikes ###########")
     clf = DogCatClassifier(args.data, categories=["car", "bike"])
     prev_epoch = 0
     for epoch in [5]: #[1, 5, 10, 20]:
@@ -347,7 +347,7 @@ if __name__ == "__main__":
         clf.fit(save_dir, epochs=epoch - prev_epoch, plot_res_path=plot_path)
         prev_epoch = epoch
 
-    print("########### Exp 2: transfer learning on cat an dogs ###########")
+    print("########### Exp 2: transfer learning from car and bikes on cat an dogs ###########")
     for data_size in [250, 500, 1000, 2000, 4000]:
         for motor_bike_epoch in [5]: #[1, 5, 10, 20]:
             model_name_saved = f"car_bike_epoch_{motor_bike_epoch}"

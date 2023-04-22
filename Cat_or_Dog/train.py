@@ -32,12 +32,10 @@ class DogCatClassifier:
     IMG_WIDTH = 256
     BATCH_SIZE = 32
 
-    def __init__(self, data_dir, data_size=-1, categories=["cat", "dog"], epochs=1, model=None, tl=False, numLayersNotFreezed=1):
+    def __init__(self, data_dir, data_size=-1, categories=["cat", "dog"], model=None, tl=False, numLayersNotFreezed=1):
         """
         :param data_dir: directory of the data
-        :param epochs: number of epochs for the training
         """
-        self.epochs = epochs
         self.data_dir = data_dir
         self.data_files = os.listdir(self.data_dir)[:data_size]
 
@@ -52,7 +50,9 @@ class DogCatClassifier:
 
         self.model = self._load_model(model, tl, numLayersNotFreezed)
 
-    def fit(self, folder):
+        self.total_epochs = 0
+
+    def fit(self, folder, epochs=1, plot_res_path=os.path.join(SAVE_DIR, "results.png")):
         """Fit the model using the data in the selected directory"""
         train_set, val_set, test_set = self._gen_data()
 
@@ -66,10 +66,11 @@ class DogCatClassifier:
         # Fit the model
         history = self.model.fit(
             train_set,
-            epochs=self.epochs,
+            epochs=epochs,
             validation_data=val_set,
             callbacks=[cp_callback],
         )
+        self.total_epochs += epochs
 
         # Show the predictions on the testing set
         result = self.model.evaluate(test_set, batch_size=self.BATCH_SIZE)
@@ -82,7 +83,7 @@ class DogCatClassifier:
         self.model.save(folder)
 
         # Plot training results
-        epochs_range = range(self.epochs)
+        epochs_range = range(self.total_epochs)
 
         # Accuracy in training and validation sets as the training goes
         acc = history.history["accuracy"]
@@ -103,7 +104,7 @@ class DogCatClassifier:
         plt.legend(loc="upper right")
         plt.title("Training and Validation Loss")
 
-        plt.savefig(os.path.join(SAVE_DIR, "results.png"))
+        plt.savefig(plot_res_path)
 
     def _load_model(self, path, transferlearning, numLayersNotFreezed):
         """Build a CNN model for image classification"""
@@ -321,3 +322,47 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    #if args.pretrainedmodel == "":
+    #    clf = DogCatClassifier(args.data, categories=args.categories, model=args.modelpath, tl=args.transferlearning, epochs=5)
+    #elif args.pretrainedmodel == "MobileNetV2":
+    #    clf = DogCatClassifierKerasArch(args.data, MobileNetV2, data_size=data_size, categories=args.categories)
+
+    print("########### Exp 1: train model on motos and bikes ###########")
+    clf = DogCatClassifier(args.data, categories=["car", "bike"])
+    prev_epoch = 0
+    for epoch in [1, 5, 10, 20]:
+        model_name = f"car_bike_epoch_{epoch}"
+        save_dir = f"{args.folder}/{model_name}"
+        plot_path = f"{save_dir}/{model_name}.png"
+        os.makedirs(save_dir, exist_ok=True)
+
+        clf.fit(save_dir, epochs=epoch - prev_epoch, plot_res_path=plot_path)
+        prev_epoch = epoch
+
+    print("########### Exp 2: transfer learning on cat an dogs ###########")
+    for data_size in [250, 500, 1000, 2000, 4000]:
+        for motor_bike_epoch in [1, 5, 10, 20]:
+            model_name_saved = f"car_bike_epoch_{motor_bike_epoch}"
+            model_saved_path = f"{args.folder}/{model_name_saved}"
+
+            model_name = f"cat_dog_datasize_{data_size}_car_bike_epoch_{motor_bike_epoch}"
+            save_dir = f"{args.folder}/{model_name}"
+            plot_path = f"{save_dir}/{model_name}.png"
+            os.makedirs(save_dir, exist_ok=True)
+
+            clf = DogCatClassifier(args.data, data_size=data_size, model=model_saved_path, tl=True)
+            clf.fit(save_dir, epochs=5, plot_res_path=plot_path)
+
+    print("########### Exp 3: transfer learning from Keras on cat an dogs ###########")
+    for data_size in [250, 500, 1000, 2000, 4000]:
+        for motor_bike_epoch in [1, 5, 10, 20]:
+            model_name_saved = f"car_bike_epoch_{motor_bike_epoch}"
+            model_saved_path = f"{args.folder}/{model_name_saved}"
+
+            model_name = f"MobileNetV2_cat_dog_datasize_{data_size}_car_bike_epoch_{motor_bike_epoch}"
+            save_dir = f"{args.folder}/{model_name}"
+            plot_path = f"{save_dir}/{model_name}.png"
+            os.makedirs(save_dir, exist_ok=True)
+
+            clf = DogCatClassifierKerasArch(args.data, MobileNetV2, data_size=data_size)
+            clf.fit(save_dir, epochs=5, plot_res_path=plot_path)

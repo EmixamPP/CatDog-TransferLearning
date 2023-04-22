@@ -32,16 +32,17 @@ class DogCatClassifier:
     IMG_WIDTH = 256
     BATCH_SIZE = 32
 
-    def __init__(self, data_dir, categories=["cat", "dog"], epochs=1, model=None, tl=False, numLayersNotFreezed=1):
+    def __init__(self, data_dir, data_size=-1, categories=["cat", "dog"], epochs=1, model=None, tl=False, numLayersNotFreezed=1):
         """
         :param data_dir: directory of the data
         :param epochs: number of epochs for the training
         """
         self.epochs = epochs
         self.data_dir = data_dir
+        self.data_files = os.listdir(self.data_dir)[:data_size]
 
         # Load data and labels
-        self.X = os.listdir(self.data_dir)  # Files names of the images
+        self.X = self.data_files  # Files names of the images
         random.shuffle(self.X)
         self.X = self.X
         self.y = np.empty(len(self.X), dtype=str)  # Labels
@@ -198,7 +199,7 @@ class DogCatClassifier:
         train_data_generator = train_datagen.flow_from_dataframe(
             df_train,
             # Directory in which the files can be found
-            directory=self.data_dir,
+            directory=self.data_path,
             # Column name for the image names
             x_col="filename",
             # Column name for the labels
@@ -216,7 +217,7 @@ class DogCatClassifier:
         )
         valid_data_generator = train_datagen.flow_from_dataframe(
             df_train,
-            directory=self.data_dir,
+            directory=self.data_path,
             x_col="filename",
             y_col="class",
             subset="validation",
@@ -227,7 +228,7 @@ class DogCatClassifier:
         )
         test_data_generator = test_datagen.flow_from_dataframe(
             df_test,
-            directory=self.data_dir,
+            directory=self.data_path,
             x_col="filename",
             y_col="class",
             shuffle=False,
@@ -239,10 +240,10 @@ class DogCatClassifier:
         return train_data_generator, valid_data_generator, test_data_generator
 
 
-class DogCatClassifierTransfer(DogCatClassifier):
-    def __init__(self, data, architecture, categories=["cat", "dog"]):
+class DogCatClassifierKerasArch(DogCatClassifier):
+    def __init__(self, data, architecture, data_size=-1, categories=["cat", "dog"]):
         self.buildArchitecture = architecture
-        super().__init__(data, categories=categories)
+        super().__init__(data, data_size=data_size, categories=categories)
 
     def _load_model(self):
         """Build a CNN model for image classification"""
@@ -320,8 +321,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.pretrainedmodel == "":
-        clf = DogCatClassifier(args.data, categories=args.categories, model=args.modelpath, tl=args.transferlearning, epochs=5)
-    elif args.pretrainedmodel == "MobileNetV2":
-        clf = DogCatClassifierTransfer(args.data, MobileNetV2, categories=args.categories)
-    clf.fit(args.folder)

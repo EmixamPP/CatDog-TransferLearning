@@ -274,7 +274,7 @@ if __name__ == "__main__":
         "-f",
         "--folder",
         type=str,
-        help="Destination folder to save the model after training ends.",
+        help="Destination folder to save the model after training ends",
         default="Custom",
     )
 
@@ -282,7 +282,15 @@ if __name__ == "__main__":
         "-d",
         "--data",
         type=str,
-        help="Images folder",
+        help="Images folder for the base model",
+        required=True,
+    )
+
+    parser.add_argument(
+        "-tld",
+        "--tldata",
+        type=str,
+        help="Images folder for the transfer learning model",
         required=True,
     )
 
@@ -350,7 +358,7 @@ if __name__ == "__main__":
             plot_path = f"{save_dir}/{model_name}.png"
             os.makedirs(save_dir, exist_ok=True)
 
-            clf = DogCatClassifier(args.data, data_size=data_size, model=model_saved_path, tl=True)
+            clf = DogCatClassifier(args.tldata, data_size=data_size, model=model_saved_path, tl=True)
             clf.fit(save_dir, epochs=5, plot_res_path=plot_path)
 
     print("########### Exp 3: transfer learning from Keras on cat an dogs ###########")

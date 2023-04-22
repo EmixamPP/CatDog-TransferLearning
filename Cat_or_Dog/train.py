@@ -338,7 +338,7 @@ if __name__ == "__main__":
     print("########### Exp 1: train model on motos and bikes ###########")
     clf = DogCatClassifier(args.data, categories=["car", "bike"])
     prev_epoch = 0
-    for epoch in [1, 5, 10, 20]:
+    for epoch in [5]: #[1, 5, 10, 20]:
         model_name = f"car_bike_epoch_{epoch}"
         save_dir = f"{args.folder}/{model_name}"
         plot_path = f"{save_dir}/{model_name}.png"
@@ -349,7 +349,7 @@ if __name__ == "__main__":
 
     print("########### Exp 2: transfer learning on cat an dogs ###########")
     for data_size in [250, 500, 1000, 2000, 4000]:
-        for motor_bike_epoch in [1, 5, 10, 20]:
+        for motor_bike_epoch in [5]: #[1, 5, 10, 20]:
             model_name_saved = f"car_bike_epoch_{motor_bike_epoch}"
             model_saved_path = f"{args.folder}/{model_name_saved}"
 
@@ -363,7 +363,7 @@ if __name__ == "__main__":
 
     print("########### Exp 3: transfer learning from Keras on cat an dogs ###########")
     for data_size in [250, 500, 1000, 2000, 4000]:
-        for motor_bike_epoch in [1, 5, 10, 20]:
+        for motor_bike_epoch in [5]: #[1, 5, 10, 20]:
             model_name_saved = f"car_bike_epoch_{motor_bike_epoch}"
             model_saved_path = f"{args.folder}/{model_name_saved}"
 

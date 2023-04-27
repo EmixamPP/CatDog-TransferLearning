@@ -200,7 +200,7 @@ class DogCatClassifier:
         train_data_generator = train_datagen.flow_from_dataframe(
             df_train,
             # Directory in which the files can be found
-            directory=self.data_path,
+            directory=self.data_dir,
             # Column name for the image names
             x_col="filename",
             # Column name for the labels
@@ -218,7 +218,7 @@ class DogCatClassifier:
         )
         valid_data_generator = train_datagen.flow_from_dataframe(
             df_train,
-            directory=self.data_path,
+            directory=self.data_dir,
             x_col="filename",
             y_col="class",
             subset="validation",
@@ -229,7 +229,7 @@ class DogCatClassifier:
         )
         test_data_generator = test_datagen.flow_from_dataframe(
             df_test,
-            directory=self.data_path,
+            directory=self.data_dir,
             x_col="filename",
             y_col="class",
             shuffle=False,

@@ -1,5 +1,6 @@
 import argparse
 import os
+import pickle
 import random
 
 import matplotlib.pyplot as plt
@@ -82,12 +83,18 @@ class DogCatClassifier:
         # Save model information
         self.model.save(folder)
 
+        self.history["n_epochs"] += epochs
+        for key in self.history:
+            if key=="n_epochs":
+                continue
+            self.history[key] += history.history[key]
+
         # Plot training results
         epochs_range = range(self.total_epochs)
 
         # Accuracy in training and validation sets as the training goes
-        acc = history.history["accuracy"]
-        val_acc = history.history["val_accuracy"]
+        acc = self.history["accuracy"]
+        val_acc = self.history["val_accuracy"]
         plt.figure(figsize=(8, 4))
         plt.subplot(1, 2, 1)
         plt.plot(epochs_range, acc, label="Training Accuracy")
@@ -96,8 +103,8 @@ class DogCatClassifier:
         plt.title("Training and Validation Accuracy")
 
         # Loss in training and validation sets as the training goes
-        loss = history.history["loss"]
-        val_loss = history.history["val_loss"]
+        loss = self.history["loss"]
+        val_loss = self.history["val_loss"]
         plt.subplot(1, 2, 2)
         plt.plot(epochs_range, loss, label="Training Loss")
         plt.plot(epochs_range, val_loss, label="Validation Loss")
@@ -105,6 +112,10 @@ class DogCatClassifier:
         plt.title("Training and Validation Loss")
 
         plt.savefig(plot_res_path)
+
+        directory = os.path.dirname(plot_res_path)
+        with open(os.path.join(directory, "data.bin"), "wb") as f:
+            pickle.dump(self.history, f)
 
     def _load_model(self, path, transferlearning, numLayersNotFreezed):
         """Build a CNN model for image classification"""
@@ -248,7 +259,12 @@ class DogCatClassifierKerasArch(DogCatClassifier):
 
     def _load_model(self):
         """Build a CNN model for image classification"""
-        model = self.buildArchitecture(weights=None,
+        # From guide : https://keras.io/guides/transfer_learning/
+
+        w = "imagenet" if transferlearning else None
+        # First, instantiate a base model with pre-trained weights.
+        base_model = self.buildArchitecture(weights=w,
+                                       include_top=False,
                                        input_shape=(DogCatClassifier.IMG_WIDTH, DogCatClassifier.IMG_HEIGHT, 3),
                                        classes=2)
         model.class_mode = "categorical"
@@ -336,7 +352,7 @@ if __name__ == "__main__":
     #    clf = DogCatClassifierKerasArch(args.data, MobileNetV2, data_size=data_size, categories=args.categories)
 
     print("########### Exp 1: train model on car and bikes ###########")
-    clf = DogCatClassifier(args.data, categories=["car", "bike"])
+    clf = DogCatClassifier(args.data, categories=["Car", "Bike"])
     prev_epoch = 0
     for epoch in [5]: #[1, 5, 10, 20]:
         model_name = f"car_bike_epoch_{epoch}"

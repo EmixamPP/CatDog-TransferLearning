@@ -8,11 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras import Input, layers, Model
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import RMSprop
 from keras_preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
+from tensorflow.keras import Input, layers, Model
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.applications.resnet import preprocess_input
 from tensorflow.keras.layers import (
@@ -22,6 +20,8 @@ from tensorflow.keras.layers import (
     Flatten,
     Dropout,
 )
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import RMSprop
 
 SAVE_DIR = "backup"  # Save directory for backup weights during the training
 
@@ -98,12 +98,12 @@ class DogCatClassifier:
 
         self.history["n_epochs"] += epochs
         for key in self.history:
-            if key=="n_epochs":
+            if key == "n_epochs":
                 continue
             self.history[key] += history.history[key]
 
         # Plot training results
-        epochs_range = range(1, self.history["n_epochs"]+1)
+        epochs_range = range(1, self.history["n_epochs"] + 1)
 
         # Accuracy in training and validation sets as the training goes
         acc = self.history["accuracy"]
@@ -275,9 +275,9 @@ class DogCatClassifierKerasArch(DogCatClassifier):
         w = "imagenet" if transferlearning else None
         # First, instantiate a base model with pre-trained weights.
         base_model = self.buildArchitecture(weights=w,
-                                       include_top=False,
-                                       input_shape=(DogCatClassifier.IMG_WIDTH, DogCatClassifier.IMG_HEIGHT, 3),
-                                       classes=2)
+                                            include_top=False,
+                                            input_shape=(DogCatClassifier.IMG_WIDTH, DogCatClassifier.IMG_HEIGHT, 3),
+                                            classes=2)
         # Then, freeze the base model.
         base_model.trainable = not transferlearning
 
@@ -345,7 +345,7 @@ if __name__ == "__main__":
         plot_path = f"{save_dir}/{model_name}.png"
         time_path = f"{save_dir}/{model_name}.txt"
         os.makedirs(save_dir, exist_ok=True)
-        
+
         start = time.time()
         clf.fit(save_dir, epochs=epoch - prev_epoch, plot_res_path=plot_path)
         prev_epoch = epoch
@@ -364,7 +364,7 @@ if __name__ == "__main__":
             plot_path = f"{save_dir}/{model_name}.png"
             time_path = f"{save_dir}/{model_name}.txt"
             os.makedirs(save_dir, exist_ok=True)
-            
+
             start = time.time()
             clf = DogCatClassifier(args.tldata, data_size=data_size, model=model_saved_path, tl=True)
             clf.fit(save_dir, epochs=15, plot_res_path=plot_path)

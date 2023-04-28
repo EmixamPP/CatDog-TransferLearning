@@ -2,11 +2,13 @@ import argparse
 import os
 import pickle
 import random
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras import Input, layers, Model
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import RMSprop
 from keras_preprocessing.image import ImageDataGenerator
@@ -23,6 +25,7 @@ from tensorflow.keras.layers import (
 
 SAVE_DIR = "backup"  # Save directory for backup weights during the training
 
+
 class DogCatClassifier:
     """
     Image classifier for dog and cat pictures using Deep Learning
@@ -38,7 +41,9 @@ class DogCatClassifier:
         :param data_dir: directory of the data
         """
         self.data_dir = data_dir
-        self.data_files = os.listdir(self.data_dir)[:data_size]
+        files_path = os.listdir(self.data_dir)
+        random.shuffle(files_path)
+        self.data_files = files_path[:data_size]
 
         # Load data and labels
         self.X = self.data_files  # Files names of the images
@@ -49,9 +54,17 @@ class DogCatClassifier:
         for category in categories:
             self.y[np.char.startswith(self.X, category)] = category[0]
 
+        self.total_epochs = 0
+
         self.model = self._load_model(model, tl, numLayersNotFreezed)
 
-        self.total_epochs = 0
+        self.history = {
+            "n_epochs": 0,
+            "accuracy": [],
+            "val_accuracy": [],
+            "loss": [],
+            "val_loss": []
+        }
 
     def fit(self, folder, epochs=1, plot_res_path=os.path.join(SAVE_DIR, "results.png")):
         """Fit the model using the data in the selected directory"""
@@ -90,7 +103,7 @@ class DogCatClassifier:
             self.history[key] += history.history[key]
 
         # Plot training results
-        epochs_range = range(self.total_epochs)
+        epochs_range = range(1, self.history["n_epochs"]+1)
 
         # Accuracy in training and validation sets as the training goes
         acc = self.history["accuracy"]
@@ -169,8 +182,6 @@ class DogCatClassifier:
         else:
             model = tf.keras.models.load_model(path)
 
-        model.class_mode = "binary"
-
         if transferlearning:
             for layer in model.layers[1:len(model.layers) - numLayersNotFreezed]:
                 layer.trainable = False
@@ -223,7 +234,7 @@ class DogCatClassifier:
             # batch size
             batch_size=self.BATCH_SIZE,
             # Classification mode
-            class_mode=self.model.class_mode,
+            class_mode="binary",
             # Target size of the images
             target_size=(self.IMG_HEIGHT, self.IMG_WIDTH),
         )
@@ -235,7 +246,7 @@ class DogCatClassifier:
             subset="validation",
             shuffle=True,
             batch_size=self.BATCH_SIZE,
-            class_mode=self.model.class_mode,
+            class_mode="binary",
             target_size=(self.IMG_HEIGHT, self.IMG_WIDTH),
         )
         test_data_generator = test_datagen.flow_from_dataframe(
@@ -245,7 +256,7 @@ class DogCatClassifier:
             y_col="class",
             shuffle=False,
             batch_size=self.BATCH_SIZE,
-            class_mode=self.model.class_mode,
+            class_mode="binary",
             target_size=(self.IMG_HEIGHT, self.IMG_WIDTH),
         )
 
@@ -253,11 +264,11 @@ class DogCatClassifier:
 
 
 class DogCatClassifierKerasArch(DogCatClassifier):
-    def __init__(self, data, architecture, data_size=-1, categories=["cat", "dog"]):
+    def __init__(self, data, architecture, data_size=-1, categories=["cat", "dog"], tl=True):
         self.buildArchitecture = architecture
-        super().__init__(data, data_size=data_size, categories=categories)
+        super().__init__(data, data_size=data_size, categories=categories, tl=tl)
 
-    def _load_model(self):
+    def _load_model(self, _, transferlearning, ___):
         """Build a CNN model for image classification"""
         # From guide : https://keras.io/guides/transfer_learning/
 
@@ -267,10 +278,23 @@ class DogCatClassifierKerasArch(DogCatClassifier):
                                        include_top=False,
                                        input_shape=(DogCatClassifier.IMG_WIDTH, DogCatClassifier.IMG_HEIGHT, 3),
                                        classes=2)
-        model.class_mode = "categorical"
+        # Then, freeze the base model.
+        base_model.trainable = not transferlearning
+
+        inputs = Input(shape=(DogCatClassifier.IMG_WIDTH, DogCatClassifier.IMG_HEIGHT, 3))
+        # We make sure that the base_model is running in inference mode here,
+        # by passing `training=False`. This is important for fine-tuning, as you will
+        # learn in a few paragraphs.
+        x = base_model(inputs, training=not transferlearning)
+        # Convert features of shape `base_model.output_shape[1:]` to vectors
+        x = layers.GlobalAveragePooling2D()(x)
+
+        # A Dense classifier with a single unit (binary classification)
+        outputs = layers.Dense(1)(x)
+        model = Model(inputs, outputs)
 
         model.compile(
-            loss="categorical_crossentropy",  # Loss function for binary classification
+            loss="binary_crossentropy",  # Loss function for binary classification
             optimizer=RMSprop(
                 learning_rate=1e-3
             ),  # Optimizer function to update weights during the training
@@ -310,83 +334,93 @@ if __name__ == "__main__":
         required=True,
     )
 
-    parser.add_argument(
-        "-m",
-        "--pretrainedmodel",
-        type=str,
-        help="Name of a pretrained network",
-        default="",
-        choices=["MobileNetV2"]
-    )
-
-    parser.add_argument(
-        "-mp",
-        "--modelpath",
-        type=str,
-        help="Path to an existing model",
-        default=None
-    )
-
-    parser.add_argument(
-        "-c",
-        "--categories",
-        type=str,
-        nargs="+",
-        help="Name of the categories",
-        default=["cat", "dog"],
-    )
-
-    parser.add_argument(
-        "-tl",
-        "--transferlearning",
-        type=bool,
-        help="Is TL applied",
-        default=False,
-    )
-
     args = parser.parse_args()
-
-    #if args.pretrainedmodel == "":
-    #    clf = DogCatClassifier(args.data, categories=args.categories, model=args.modelpath, tl=args.transferlearning, epochs=5)
-    #elif args.pretrainedmodel == "MobileNetV2":
-    #    clf = DogCatClassifierKerasArch(args.data, MobileNetV2, data_size=data_size, categories=args.categories)
 
     print("########### Exp 1: train model on car and bikes ###########")
     clf = DogCatClassifier(args.data, categories=["Car", "Bike"])
     prev_epoch = 0
-    for epoch in [5]: #[1, 5, 10, 20]:
+    for epoch in [5, 10, 15]:
         model_name = f"car_bike_epoch_{epoch}"
         save_dir = f"{args.folder}/{model_name}"
         plot_path = f"{save_dir}/{model_name}.png"
+        time_path = f"{save_dir}/{model_name}.txt"
         os.makedirs(save_dir, exist_ok=True)
-
+        
+        start = time.time()
         clf.fit(save_dir, epochs=epoch - prev_epoch, plot_res_path=plot_path)
         prev_epoch = epoch
+        end = time.time()
+        with open(time_path, 'w') as f:
+            f.write(str(end - start) + "\n")
 
     print("########### Exp 2: transfer learning from car and bikes on cat an dogs ###########")
-    for data_size in [250, 500, 1000, 2000, 4000]:
-        for motor_bike_epoch in [5]: #[1, 5, 10, 20]:
+    for data_size in [100, 500, 1000, 5000, 10000]:
+        for motor_bike_epoch in [5, 10, 15]:
             model_name_saved = f"car_bike_epoch_{motor_bike_epoch}"
             model_saved_path = f"{args.folder}/{model_name_saved}"
 
             model_name = f"cat_dog_datasize_{data_size}_car_bike_epoch_{motor_bike_epoch}"
             save_dir = f"{args.folder}/{model_name}"
             plot_path = f"{save_dir}/{model_name}.png"
+            time_path = f"{save_dir}/{model_name}.txt"
             os.makedirs(save_dir, exist_ok=True)
-
+            
+            start = time.time()
             clf = DogCatClassifier(args.tldata, data_size=data_size, model=model_saved_path, tl=True)
-            clf.fit(save_dir, epochs=5, plot_res_path=plot_path)
+            clf.fit(save_dir, epochs=15, plot_res_path=plot_path)
+            end = time.time()
+            with open(time_path, 'w') as f:
+                f.write(str(end - start) + "\n")
 
-    print("########### Exp 3: transfer learning from Keras on cat an dogs ###########")
-    for data_size in [250, 500, 1000, 2000, 4000]:
-        for motor_bike_epoch in [5]: #[1, 5, 10, 20]:
+    print("########### Exp 3: train model on car and bikes ###########")
+    clf = DogCatClassifier(args.tldata)
+    prev_epoch = 0
+    for epoch in [15]:
+        model_name = f"cat_dog_epoch_{epoch}"
+        save_dir = f"{args.folder}/{model_name}"
+        plot_path = f"{save_dir}/{model_name}.png"
+        time_path = f"{save_dir}/{model_name}.txt"
+        os.makedirs(save_dir, exist_ok=True)
+
+        start = time.time()
+        clf.fit(save_dir, epochs=epoch - prev_epoch, plot_res_path=plot_path)
+        prev_epoch = epoch
+        end = time.time()
+        with open(time_path, 'w') as f:
+            f.write(str(end - start) + "\n")
+
+    print("########### Exp 4: train model from Keras architecture on car and bikes ###########")
+    clf = DogCatClassifierKerasArch(args.tldata, MobileNetV2, tl=False)
+    prev_epoch = 0
+    for epoch in [15]:
+        model_name = f"MobileNetV2_cat_dog_epoch_{epoch}"
+        save_dir = f"{args.folder}/{model_name}"
+        plot_path = f"{save_dir}/{model_name}.png"
+        time_path = f"{save_dir}/{model_name}.txt"
+        os.makedirs(save_dir, exist_ok=True)
+
+        start = time.time()
+        clf.fit(save_dir, epochs=epoch - prev_epoch, plot_res_path=plot_path)
+        end = time.time()
+        with open(time_path, 'w') as f:
+            f.write(str(end - start) + "\n")
+        prev_epoch = epoch
+
+    print("########### Exp 5: transfer learning from Keras architecture on cat an dogs ###########")
+    for data_size in [100, 500, 1000, 5000, 10000]:
+        for motor_bike_epoch in [5, 10, 15]:
             model_name_saved = f"car_bike_epoch_{motor_bike_epoch}"
             model_saved_path = f"{args.folder}/{model_name_saved}"
 
             model_name = f"MobileNetV2_cat_dog_datasize_{data_size}_car_bike_epoch_{motor_bike_epoch}"
             save_dir = f"{args.folder}/{model_name}"
             plot_path = f"{save_dir}/{model_name}.png"
+            time_path = f"{save_dir}/{model_name}.txt"
             os.makedirs(save_dir, exist_ok=True)
 
+            start = time.time()
             clf = DogCatClassifierKerasArch(args.tldata, MobileNetV2, data_size=data_size)
-            clf.fit(save_dir, epochs=5, plot_res_path=plot_path)
+            clf.fit(save_dir, epochs=15, plot_res_path=plot_path)
+            end = time.time()
+            with open(time_path, 'w') as f:
+                f.write(str(end - start) + "\n")

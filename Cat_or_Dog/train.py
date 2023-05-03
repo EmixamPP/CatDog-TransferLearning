@@ -372,22 +372,23 @@ if __name__ == "__main__":
             with open(time_path, 'w') as f:
                 f.write(str(end - start) + "\n")
 
-    print("########### Exp 3: train model on car and bikes ###########")
-    clf = DogCatClassifier(args.tldata)
-    prev_epoch = 0
-    for epoch in [15]:
-        model_name = f"cat_dog_epoch_{epoch}"
-        save_dir = f"{args.folder}/{model_name}"
-        plot_path = f"{save_dir}/{model_name}.png"
-        time_path = f"{save_dir}/{model_name}.txt"
-        os.makedirs(save_dir, exist_ok=True)
+    print("########### Exp 3: train model on cat and dog ###########")
+    for data_size in [100, 500, 1000, 5000, 10000]:
+        clf = DogCatClassifier(args.tldata, data_size=data_size)
+        prev_epoch = 0
+        for epoch in [15]:
+            model_name = f"cat_dog_datasize_{data_size}_epoch_{epoch}"
+            save_dir = f"{args.folder}/{model_name}"
+            plot_path = f"{save_dir}/{model_name}.png"
+            time_path = f"{save_dir}/{model_name}.txt"
+            os.makedirs(save_dir, exist_ok=True)
 
-        start = time.time()
-        clf.fit(save_dir, epochs=epoch - prev_epoch, plot_res_path=plot_path)
-        prev_epoch = epoch
-        end = time.time()
-        with open(time_path, 'w') as f:
-            f.write(str(end - start) + "\n")
+            start = time.time()
+            clf.fit(save_dir, epochs=epoch - prev_epoch, plot_res_path=plot_path)
+            prev_epoch = epoch
+            end = time.time()
+            with open(time_path, 'w') as f:
+                f.write(str(end - start) + "\n")
 
     print("########### Exp 4: train model from Keras architecture on car and bikes ###########")
     clf = DogCatClassifierKerasArch(args.tldata, MobileNetV2, tl=False)

@@ -36,7 +36,7 @@ class DogCatClassifier:
     BATCH_SIZE = 32
     VALIDATION_SIZE = 200
 
-    def __init__(self, data_dir, data_size=-1, categories=["cat", "dog"], model=None, tl=False, numLayersNotFreezed=1):
+    def __init__(self, data_dir, test_set_size, val_set_size, train_set_size=None, categories=["cat", "dog"], model=None, tl=False, numLayersNotFreezed=1):
         """
         :param data_dir: directory of the data
         """
@@ -274,9 +274,9 @@ class DogCatClassifier:
 
 
 class DogCatClassifierKerasArch(DogCatClassifier):
-    def __init__(self, data, architecture, data_size=-1, categories=["cat", "dog"], tl=True):
+    def __init__(self, data, architecture, test_set_size, val_set_size, train_set_size=None, categories=["cat", "dog"], tl=True):
         self.buildArchitecture = architecture
-        super().__init__(data, data_size=data_size, categories=categories, tl=tl)
+        super().__init__(data, test_set_size=test_set_size, val_set_size=val_set_size, train_set_size=train_set_size, categories=categories, tl=tl)
 
     def _load_model(self, _, transferlearning, ___):
         """Build a CNN model for image classification"""

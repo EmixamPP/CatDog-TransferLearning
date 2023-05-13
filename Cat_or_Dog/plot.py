@@ -23,9 +23,9 @@ def plot_dataSize(data):
             else:
                 nEpochs = 0
             if nEpochs in ys:
-                ys[nEpochs].append((dataSize, data[k]["val_accuracy"][-1]))
+                ys[nEpochs].append((dataSize, max(data[k]["val_accuracy"])))
             else:
-                ys[nEpochs] = [(dataSize, data[k]["val_accuracy"][-1])]
+                ys[nEpochs] = [(dataSize, max(data[k]["val_accuracy"]))]
 
 
     for key in ys:
@@ -38,5 +38,5 @@ def plot_dataSize(data):
 
 
 if __name__ == '__main__':
-    data = parse_directory("/home/emma/Documents/MA2/techniques_ia/model")
+    data = parse_directory("/home/simon/Téléchargements/model")
     plot_dataSize(data)

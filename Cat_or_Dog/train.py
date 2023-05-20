@@ -10,7 +10,7 @@ import tensorflow as tf
 from keras_preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import Input, layers, Model
-from tensorflow.keras.applications import MobileNetV2
+import tensorflow.keras.applications as KerasApp
 from tensorflow.keras.applications.resnet import preprocess_input
 from tensorflow.keras.layers import (
     Dense,
@@ -36,7 +36,8 @@ class DogCatClassifier:
     BATCH_SIZE = 32
     VALIDATION_SIZE = 200
 
-    def __init__(self, data_dir, test_set_size, val_set_size, train_set_size=None, categories=["cat", "dog"], model=None, tl=False, numLayersNotFreezed=1):
+    def __init__(self, data_dir, test_set_size, val_set_size, train_set_size=None, categories=["cat", "dog"],
+                 model=None, tl=False, numLayersNotFreezed=1):
         """
         :param data_dir: directory of the data
         """
@@ -48,7 +49,7 @@ class DogCatClassifier:
             train_set_size = len(files_path) - (test_set_size + val_set_size)
 
         data_size = train_set_size + test_set_size + val_set_size
-        assert data_size <= len(files_path) and data_size>0, "Bad usage"
+        assert data_size <= len(files_path) and data_size > 0, "Bad usage"
         self.data_files = files_path[:data_size]
 
         # Load data and labels
@@ -72,7 +73,8 @@ class DogCatClassifier:
             "val_loss": []
         }
 
-        self.train_set, self.val_set, self.test_set = self._gen_data(data_size, train_set_size, test_set_size, val_set_size)
+        self.train_set, self.val_set, self.test_set = self._gen_data(data_size, train_set_size, test_set_size,
+                                                                     val_set_size)
 
     def fit(self, folder, epochs=1, plot_res_path=os.path.join(SAVE_DIR, "results.png")):
         """Fit the model using the data in the selected directory"""
@@ -190,7 +192,7 @@ class DogCatClassifier:
             model = tf.keras.models.load_model(path)
 
         if transferlearning:
-            model.layers[-1]=Dense(1, activation="sigmoid")
+            model.layers[-1] = Dense(1, activation="sigmoid")
             for layer in model.layers[1:len(model.layers) - numLayersNotFreezed]:
                 layer.trainable = False
 
@@ -202,13 +204,13 @@ class DogCatClassifier:
         """Split the data set into training, validation and testing sets"""
 
         # Split data into training+validation and testing sets
-        p = test_set_size/data_size
+        p = test_set_size / data_size
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=p)
         df_train = pd.DataFrame({"filename": X_train, "class": y_train})
         df_test = pd.DataFrame({"filename": X_test, "class": y_test})
 
         # use data generators as input for the model
-        p = val_set_size/(val_set_size+train_set_size)
+        p = val_set_size / (val_set_size + train_set_size)
         train_datagen = ImageDataGenerator(
             rescale=1 / 255,  # Divide input values by 255 so it ranges between 0 and 1
             # The images are converted from RGB to BGR, then each color channel is
@@ -274,9 +276,11 @@ class DogCatClassifier:
 
 
 class DogCatClassifierKerasArch(DogCatClassifier):
-    def __init__(self, data, architecture, test_set_size, val_set_size, train_set_size=None, categories=["cat", "dog"], tl=True):
+    def __init__(self, data, architecture, test_set_size, val_set_size, train_set_size=None, categories=["cat", "dog"],
+                 tl=True):
         self.buildArchitecture = architecture
-        super().__init__(data, test_set_size=test_set_size, val_set_size=val_set_size, train_set_size=train_set_size, categories=categories, tl=tl)
+        super().__init__(data, test_set_size=test_set_size, val_set_size=val_set_size, train_set_size=train_set_size,
+                         categories=categories, tl=tl)
 
     def _load_model(self, _, transferlearning, ___):
         """Build a CNN model for image classification"""
@@ -341,8 +345,7 @@ if __name__ == "__main__":
         "--pretrainedmodel",
         type=str,
         help="Name of a pretrained network",
-        default="",
-        choices=["MobileNetV2"]
+        default="MobileNetV2",
     )
 
     parser.add_argument(
@@ -405,7 +408,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.pretrainedmodel == "":
-        clf = DogCatClassifier(args.data, test_set_size=args.test_set_size, val_set_size=args.val_set_size, train_set_size=args.train_set_size, categories=args.categories, model=args.modelpath, tl=args.transferlearning)
-    elif args.pretrainedmodel == "MobileNetV2":
-        clf = DogCatClassifierKerasArch(args.data, MobileNetV2, test_set_size=args.test_set_size, val_set_size=args.val_set_size, train_set_size=args.train_set_size, categories=args.categories)
+        clf = DogCatClassifier(args.data, test_set_size=args.test_set_size, val_set_size=args.val_set_size,
+                               train_set_size=args.train_set_size, categories=args.categories, model=args.modelpath,
+                               tl=args.transferlearning)
+    else:
+        architecture = eval(f"KerasApp.{args.pretrainedmodel}")
+        clf = DogCatClassifierKerasArch(args.data, architecture, test_set_size=args.test_set_size,
+                                        val_set_size=args.val_set_size, train_set_size=args.train_set_size,
+                                        categories=args.categories)
+
     clf.fit(args.folder, epochs=args.n_epochs)

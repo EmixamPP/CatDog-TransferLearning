@@ -48,7 +48,6 @@ for epoch in [5, 10, 15]:
 
 print("########### Exp 2: transfer learning from car and bikes book models on cat an dogs ###########")
 for data_size in [100, 500, 1000, 5000, 10000-(test_set_size+val_set_size)]:
-    start = time.time()
     for motor_bike_epoch in [5, 10, 15]:
         model_name_saved = f"car_bike_epoch_{motor_bike_epoch}"
         model_saved_path = f"{args.folder}/{model_name_saved}"

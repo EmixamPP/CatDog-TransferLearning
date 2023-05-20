@@ -21,8 +21,19 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import RMSprop
+from timeit import default_timer as timer
+from tensorflow.keras.callbacks import Callback
 
 SAVE_DIR = "backup"  # Save directory for backup weights during the training
+
+
+class TimingCallback(Callback):
+    def __init__(self, logs={}):
+        self.logs=[]
+    def on_epoch_begin(self, epoch, logs={}):
+        self.starttime = timer()
+    def on_epoch_end(self, epoch, logs={}):
+        self.logs.append(timer()-self.starttime)
 
 
 class DogCatClassifier:
@@ -70,7 +81,8 @@ class DogCatClassifier:
             "accuracy": [],
             "val_accuracy": [],
             "loss": [],
-            "val_loss": []
+            "val_loss": [],
+            "time": 0
         }
 
         self.train_set, self.val_set, self.test_set = self._gen_data(data_size, train_set_size, test_set_size,
@@ -78,20 +90,13 @@ class DogCatClassifier:
 
     def fit(self, folder, epochs=1, plot_res_path=os.path.join(SAVE_DIR, "results.png")):
         """Fit the model using the data in the selected directory"""
-
-        # callback object to save weights during the training
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=os.path.join(SAVE_DIR, "weights-{epoch:03d}.ckpt"),
-            save_weights_only=True,
-            verbose=1,
-        )
-
+        cb = TimingCallback()
         # Fit the model
         history = self.model.fit(
             self.train_set,
             epochs=epochs,
             validation_data=self.val_set,
-            callbacks=[cp_callback],
+            callbacks=[cb],
         )
         self.total_epochs += epochs
 
@@ -107,7 +112,7 @@ class DogCatClassifier:
 
         self.history["n_epochs"] += epochs
         for key in self.history:
-            if key == "n_epochs":
+            if key == "n_epochs" or key == "time":
                 continue
             self.history[key] += history.history[key]
 
@@ -136,6 +141,7 @@ class DogCatClassifier:
         plt.savefig(plot_res_path)
 
         directory = os.path.dirname(plot_res_path)
+        self.history["time"] += sum(cb.logs)
         with open(os.path.join(directory, "data.bin"), "wb") as f:
             pickle.dump(self.history, f)
 

@@ -13,6 +13,12 @@ def parse_directory(directory):
         with (open(file, "rb")) as openfile:
             pickle_data = pickle.load(openfile)
             pickle_dict[filename] = pickle_data
+
+        if "time" not in pickle_data:
+            with open(os.path.join(directory, filename, filename + ".txt"), "r") as file:
+                t = float(file.readline().strip())
+                pickle_data["time"] = t
+
     return pickle_dict
 
 
@@ -39,6 +45,7 @@ def plot_dataSize(data):
     plt.xlabel("Dataset size")
     plt.ylabel("Accuracy")
     plt.legend()
+    tikzplotlib.save("exp_acc.tex")
     plt.show()
 
 

@@ -31,12 +31,13 @@ def plot_dataSize(data):
             else:
                 ys[nEpochs] = [(dataSize, max(data[k]["val_accuracy"]))]
 
-
     for key in ys:
         ys[key].sort(key=lambda tup: tup[0])
         x, y = zip(*ys[key])
         plt.plot(x, y, label="nEpochs base model = {}".format(key), linestyle="-")
     plt.title("TL accuracy in terms of dataset size")
+    plt.xlabel("Dataset size")
+    plt.ylabel("Accuracy")
     plt.legend()
     plt.show()
 

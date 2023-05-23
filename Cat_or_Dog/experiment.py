@@ -3,7 +3,7 @@ from keras.applications import MobileNetV2
 
 from train import *
 
-parser = argparse.ArgumentParser(description="CNN Trainer for the Cat or Dog app.")
+parser = argparse.ArgumentParser(description="Experiements on transfer learning.")
 
 parser.add_argument(
     "-f",

@@ -1,6 +1,8 @@
 import os
+import sys
 import pickle
 
+import numpy as np
 import tikzplotlib
 from matplotlib import pyplot as plt
 

@@ -102,7 +102,6 @@ def plot_acc(data, trainingSetSize=100):
             ys[nEpochs] = data[k]["val_accuracy"]
 
     for key in ys:
-        #ys[key].sort(key=lambda tup: tup[0])
         y = [0] + ys[key]
         x = np.arange(len(y))
         plt.plot(x, y, label="nEpochs base model = {}".format(key), linestyle="-")

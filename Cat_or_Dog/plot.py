@@ -25,13 +25,15 @@ def parse_directory(directory):
 def plot_dataSize(data):
     ys = {}
     for k in data:
-        if k.startswith("cat_dog_datasize"):
+        #if k.startswith("cat_dog_datasize"):
+        if k.startswith("MobileNetV2_cat_dog_datasize_"):
             split_k = k.split("_")
-            dataSize = int(split_k[3])
-            if "car_bike" in k:
-                nEpochs = int(split_k[7])
+            dataSize = int(split_k[4])
+            """if "car_bike" in k:
+                nEpochs = int(split_k[8])
             else:
-                nEpochs = 0
+                nEpochs = 0"""
+            nEpochs = 15
             if nEpochs in ys:
                 ys[nEpochs].append((dataSize, max(data[k]["val_accuracy"])))
             else:
@@ -45,7 +47,7 @@ def plot_dataSize(data):
     plt.xlabel("Dataset size")
     plt.ylabel("Accuracy")
     plt.legend()
-    tikzplotlib.save("exp_acc.tex")
+    tikzplotlib.save("exp_MNet_acc.tex")
     plt.show()
 
 
@@ -73,8 +75,8 @@ def plot_time(data):
         x, y = zip(*ys[key])
         plt.plot(x, y, label="nEpochs base model = {}".format(key), linestyle="-")
     plt.title("Training time in terms of dataset size")
-    plt.xlabel("Time")
-    plt.ylabel("Accuracy")
+    plt.xlabel("Dataset size")
+    plt.ylabel("Time (s)")
     plt.legend()
     tikzplotlib.save("exp_time.tex")
     plt.show()
@@ -82,6 +84,8 @@ def plot_time(data):
 
 if __name__ == '__main__':
     # data = parse_directory(sys.argv[1])
-    data = parse_directory("/home/maxime/Téléchargements/model (1)/")
+    data = parse_directory("/home/emma/Documents/MA2/techniques_ia/model")
     #plot_dataSize(data)
-    plot_time(data)
+    #plot_time(data)
+    plot_acc(data, 9700)
+

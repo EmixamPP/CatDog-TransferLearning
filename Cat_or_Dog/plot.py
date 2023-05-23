@@ -115,9 +115,8 @@ def plot_acc(data, trainingSetSize=100):
     plt.show()
 
 if __name__ == '__main__':
-    # data = parse_directory(sys.argv[1])
-    data = parse_directory("/home/emma/Documents/MA2/techniques_ia/model")
-    #plot_dataSize(data)
-    #plot_time(data)
+    data = parse_directory(sys.argv[1])
+    plot_dataSize(data)
+    plot_time(data)
     plot_acc(data, 9700)
 

@@ -83,6 +83,36 @@ def plot_time(data):
     tikzplotlib.save("exp_time.tex")
     plt.show()
 
+def plot_acc(data, trainingSetSize=100):
+    ys = {}
+    for k in data:
+        if k.startswith("cat_dog_datasize") or k.startswith("MobileNetV2_cat_dog_datasize_"):
+            split_k = k.split("_")
+            dataSize = int(split_k[3 + k.startswith("MobileNetV2_cat_dog_datasize_")])
+            if dataSize != trainingSetSize:
+                continue
+            if "car_bike" in k:
+                nEpochs = int(split_k[7 + k.startswith("MobileNetV2_cat_dog_datasize_")])
+            else:
+                nEpochs = 0
+
+            if k.startswith("MobileNetV2_cat_dog_datasize_"):
+                nEpochs = "MobileNetV2"
+
+            ys[nEpochs] = data[k]["val_accuracy"]
+
+    for key in ys:
+        #ys[key].sort(key=lambda tup: tup[0])
+        y = [0] + ys[key]
+        x = np.arange(len(y))
+        plt.plot(x, y, label="nEpochs base model = {}".format(key), linestyle="-")
+    plt.title("Accuracy in terms of epochs")
+    plt.xlabel("nEpochs")
+    plt.ylabel("Accuracy")
+    plt.legend()
+    plt.xlim(0, len(x))
+    tikzplotlib.save("exp_acc.tex")
+    plt.show()
 
 if __name__ == '__main__':
     # data = parse_directory(sys.argv[1])
